@@ -6,10 +6,10 @@
 	var overlay = document.getElementById("overlay");
 	var wrapper = document.getElementById("wrapper");
 	var ctx = canvas.getContext("2d");
+	var defaultStrokeStyle = "black";
 	
 	//Game management variables
 	var paused = false;
-	var spacePressed = false;
 	var game = 0;
 	var idealFR = 120;
 	
@@ -21,7 +21,6 @@
 	//Missile base Variables
 	var missileBases = [];
 	var mBAmount = 3;
-	var mBAmountOdd = false;
 	var mBRadius = 20;
 	var mBLineWidth = 2;
 	var mBGunLength = 20;
@@ -29,14 +28,25 @@
 	var activeMissileBase = 0;
 	var mBEAngle = 0;
 	var mBSAngle = Math.PI;
-	var missilesLeft = missileAmount;
 	var mBFillColor  = "#11B1AD";
 	var mBActiveFillColor = "#FF0000"
 	var mBOriginX = 0;
 	
 	//Missile variables
 	var missiles = [];
-	var missileSpeed = 1;
+	var missileTrailColour = "#FF0000";
+	var numOfMissiles = 0;
+	var missileAngle = 0;
+	var missileSpeed = 1.25;
+	var missileDeadzone = 0.4;
+	var dx = 0;
+	var dy = 0;
+	
+	//Explosion variables
+	var explosions = [];
+	var explSpeed = 1.5;
+	var explMinRadius = 2;
+	var explMaxRadius = 4;
 	
 	//MissileBaseGuns
 	var gunAngle = 0;
@@ -61,6 +71,7 @@
 		this.gunStartPoints = {x: 0, y: 0};
 		this.gunEndPoints = {x: 0, y: 0};
 		this.radius = radius;
+		this.isDestroyed = false;
 		
 		//Start and end point define where arc drawing begins and ends, clockwise
 		this.startPoint = startPoint;
@@ -102,22 +113,27 @@
 		draw();
 		
 		//Game refresh rate. Divisor defines ideal frame rate
-		game = setInterval(update, 1000 / idealFR);
+		game = setInterval(GameUpdate, 1000 / idealFR);
 	}
 
-	//Alternative to using standard onload
-	function addLoadEvent(func) {
+	//Alternative to using standard on-load
+	function addLoadEvent(func) 
+    {
 		oldOnLoad = window.onload;
-		if (typeof window.onload != 'function') {
+		if (typeof window.onload != 'function') 
+        {
 			window.onload = func;
-		} else {
-		window.onload = function() {
-			if (oldonload) {
+		} else 
+        {
+		window.onload = function() 
+        {
+			if (oldonload) 
+            {
 				oldonload();
-			}
+            }
 		func();
 		}
-	  }
+        }
 	}
 
 	//Initial call
@@ -159,27 +175,81 @@
 	//Determines active missile base via the mouseX position
 	function determineActiveMB()
 	{
+		var shortestDist = canvas.width;
+		
 		for(i = 0; i < mBAmount; i++)
 		{
-			if((mouseX > (canvas.width/mBAmount) * i) && (mouseX < (canvas.width/mBAmount) * (i + 1)))
+			if(((mouseX > (canvas.width/mBAmount) * i) && (mouseX < (canvas.width/mBAmount) * (i + 1))) && (missileBases[i].missileAmount > 0 || !missileBases[i].isDestroyed))
 			{
-				return activeMissileBase = i;
+				activeMissileBase = i;
+			}
+		}
+		
+		//Get closest base that hasnt been destroyed and has ammo
+		if(activeMissileBase == undefined)
+		{
+			for(i = 0; i < mBAmount; i++)
+			{
+				if(Math.abs(mouseX - missileBases[i].origin.x) < shortestDist && !missilebases[i].isDestroyed && missileBases[i].missileAmount > 0)
+				{
+					shortestDist = mouseX - missileBases[i].origin.x;
+					activeMissileBase = i;
+				}
 			}
 		}
 	}
 	
+	//Create a new missile using x and y params, check active missile base has ammo before firing
 	function fireMissile(mouseX, mouseY)
 	{
-		console.log("MouseX: " + mouseX + " MouseY: " + mouseY);
-		
 		if(missileBases[activeMissileBase].structure.missileAmount > 0)
 		{
 			missiles.push(new Missile(missileBases[activeMissileBase].structure.gunEndPoints.x, missileBases[activeMissileBase].structure.gunEndPoints.y, mouseX, mouseY));
 			missileBases[activeMissileBase].structure.missileAmount--;
 		}
-		else if (missileBases[activeMissileBase].structure.missileAmount === 0) console.log("Out of missiles!");
+		else if (missileBases[activeMissileBase].structure.missileAmount === 0) console.log("Out of missiles in base " + (activeMissileBase + 1) + "!");
+	}
+	
+	//Calculate amount missile needs to move each tick
+	function updateMissiles()
+	{
+		numOfMissiles = missiles.length;
+		for(i = 0; i < numOfMissiles; i++)
+		{
+			if(missiles[i] != undefined && !missiles[i].isDead)
+			{
+				missileAngle = (Math.atan2( (missiles[i].dest.y - missiles[i].origin.y), missiles[i].dest.x - missiles[i].origin.x ));
+				
+				dx = (Math.cos(missileAngle) * missileSpeed);
+				dy = (Math.sin(missileAngle) * missileSpeed);
+				
+				missiles[i].currPos.x += dx;
+				missiles[i].currPos.y += dy;
+				
+				if( Math.abs(missiles[i].dest.x - missiles[i].currPos.x) < missileDeadzone || 
+                   Math.abs(missiles[i].dest.y - missiles[i].currPos.y) < missileDeadzone)
+				{
+					missiles[i].isDead = true;
+					dx = 0;
+					dy = 0;
+				}
+			}
+		}
 		
-		console.log(missiles);
+		for(i = 0; i < numOfMissiles; i++)
+		{
+			if(missiles[i] != undefined && missiles[i].isDead)
+			{
+				missiles.splice(i, 1);
+			}
+		}
+		
+	}
+	
+	//Generate a new explosion and push it to explosion array. Indiscriminate of "owner" of explosions (player or comp).
+	function createExplosion(explOriginX, explOriginY)
+	{
+		explosions.push(new Explosion(explOriginX, explOriginY, explMinRadius, explMaxRadius, explSpeed));
 	}
 	
 	//Calculates the angle of the base guns based on the difference between the gun origin and the mouse cursor then uses this angle
@@ -202,27 +272,16 @@
 	document.addEventListener("keydown", keyDownHandler);
 	document.addEventListener("keypress", keyPressHandler);
 	document.addEventListener("keyup", keyUpHandler);
-	document.addEventListener("mousemove", mMoveHandler);
-	document.addEventListener("click", mClickHandler);
+	
+	canvas.addEventListener("mousemove", mMoveHandler); 
+	canvas.addEventListener("click", mClickHandler);
 	
 	//Keyboard handlers
-	function keyDownHandler(e)
-	{
-		if(e.key == "Space character" || e.keyCode == 32)
-		{
-			spacePressed = true;
-		}
-	}
-	
-	function keyPressHandler(e)
-	{
-	}
 
 	function keyUpHandler(e)
 	{
 		if(e.key == "Space" || e.keyCode == 32)
 		{
-			spacePressed = false;
 			pauseGame();
 		}
 	}
@@ -236,7 +295,7 @@
 	function mMoveHandler(e)
 	{
 		mouseX = e.clientX - wrapper.offsetLeft;
-		mouseY = e.clientY;
+		mouseY = e.clientY - wrapper.offsetTop;
 	}
 }
 
@@ -249,6 +308,7 @@
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		drawBases();
 		drawCursor();
+		drawMissiles();
 	}
 	
 	//Draw missile base
@@ -257,6 +317,7 @@
 		//Iterate through each element of missileBases array, then access the properties of the value in each element i.e. the missile bases and draw them
 		for(i = 0; i < mBAmount; i++)
 		{
+			ctx.strokeStyle = defaultStrokeStyle;
 			ctx.beginPath();
 			ctx.arc(missileBases[i].structure.origin.x, missileBases[i].structure.origin.y, missileBases[i].structure.radius, missileBases[i].structure.startPoint, missileBases[i].structure.endPoint);
 			
@@ -283,6 +344,7 @@
 	//Draws square around cursor point plus dot in the middle for clarity
 	function drawCursor()
 	{
+		ctx.strokeStyle = defaultStrokeStyle;
 		//Draw outer square
 		ctx.beginPath();
 		ctx.rect(mouseX - (cursorWidth / 2), mouseY - canvas.offsetTop - (cursorHeight / 2), cursorWidth, cursorHeight);
@@ -297,20 +359,43 @@
 		ctx.stroke();
 		ctx.closePath();
 	}
+
+	function drawMissiles()
+	{
+		for(i = 0; i < missiles.length; i++)
+		{
+			if(missiles.length <= 0) return;
+			if (missiles[i] != undefined)
+			{
+				ctx.beginPath();
+				ctx.moveTo(missiles[i].origin.x, missiles[i].origin.y);
+				ctx.lineTo(missiles[i].currPos.x, missiles[i].currPos.y);
+				ctx.strokeStyle = missileTrailColour;
+				ctx.stroke();
+				ctx.closePath();
+			}
+		}
+	}
+	
+	function drawExplosions()
+	{
+        //TODO
+	}
 }
 	
 //Update loops
 {
-	function inputUpdate()
+	function update()
 	{
 		determineActiveMB();
+		if(missiles.length > 0) updateMissiles();
 	}
 	
 	//Main game loop
-	function update()
+	function GameUpdate()
 	{
 		if(!paused){
-			inputUpdate();
+			update();
 			draw();
 		}
 	}
