@@ -31,6 +31,7 @@
 	var mBFillColor  = "#11B1AD";
 	var mBActiveFillColor = "#FF0000"
 	var mBOriginX = 0;
+	var shortestDistToBase = 0;
 	
 	//Missile variables
 	var missiles = [];
@@ -175,24 +176,17 @@
 	//Determines active missile base via the mouseX position
 	function determineActiveMB()
 	{
-		var shortestDist = canvas.width;
+		shortestDistToBase = canvas.width;
+		activeMissileBase = null;
 		
-		for(i = 0; i < mBAmount; i++)
-		{
-			if(((mouseX > (canvas.width/mBAmount) * i) && (mouseX < (canvas.width/mBAmount) * (i + 1))) && (missileBases[i].missileAmount > 0 || !missileBases[i].isDestroyed))
-			{
-				activeMissileBase = i;
-			}
-		}
-		
-		//Get closest base that hasnt been destroyed and has ammo
+		//Get closest base that hasn't been destroyed and has ammo
 		if(activeMissileBase == undefined)
 		{
 			for(i = 0; i < mBAmount; i++)
 			{
-				if(Math.abs(mouseX - missileBases[i].origin.x) < shortestDist && !missilebases[i].isDestroyed && missileBases[i].missileAmount > 0)
+				if( (Math.abs(mouseX - missileBases[i].structure.origin.x) < shortestDistToBase) && (!missileBases[i].structure.isDestroyed && missileBases[i].structure.missileAmount > 0))
 				{
-					shortestDist = mouseX - missileBases[i].origin.x;
+					shortestDistToBase = mouseX - missileBases[i].structure.origin.x;
 					activeMissileBase = i;
 				}
 			}
@@ -202,12 +196,12 @@
 	//Create a new missile using x and y params, check active missile base has ammo before firing
 	function fireMissile(mouseX, mouseY)
 	{
-		if(missileBases[activeMissileBase].structure.missileAmount > 0)
+		if(activeMissileBase != null && missileBases[activeMissileBase].structure.missileAmount > 0)
 		{
 			missiles.push(new Missile(missileBases[activeMissileBase].structure.gunEndPoints.x, missileBases[activeMissileBase].structure.gunEndPoints.y, mouseX, mouseY));
 			missileBases[activeMissileBase].structure.missileAmount--;
 		}
-		else if (missileBases[activeMissileBase].structure.missileAmount === 0) console.log("Out of missiles in base " + (activeMissileBase + 1) + "!");
+		else if (activeMissileBase === null || missileBases[activeMissileBase].structure.missileAmount === 0) console.log("Out of missiles!");
 	}
 	
 	//Calculate amount missile needs to move each tick
@@ -269,8 +263,8 @@
 
 //Event handlers
 {
-	document.addEventListener("keydown", keyDownHandler);
-	document.addEventListener("keypress", keyPressHandler);
+	//document.addEventListener("keydown", keyDownHandler);
+	//document.addEventListener("keypress", keyPressHandler);
 	document.addEventListener("keyup", keyUpHandler);
 	
 	canvas.addEventListener("mousemove", mMoveHandler); 
@@ -322,7 +316,7 @@
 			ctx.arc(missileBases[i].structure.origin.x, missileBases[i].structure.origin.y, missileBases[i].structure.radius, missileBases[i].structure.startPoint, missileBases[i].structure.endPoint);
 			
 			//Visual indicator for which base is active
-			if(i === activeMissileBase) ctx.fillStyle = mBActiveFillColor;
+			if(i === activeMissileBase && activeMissileBase != null) ctx.fillStyle = mBActiveFillColor;
 			else ctx.fillStyle = mBFillColor;
 			
 			ctx.fill();
