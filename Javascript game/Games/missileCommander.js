@@ -153,7 +153,7 @@
 
 //Utilities
 {
-	//Conversion of RGB values to hex codes (from stack overflow)
+	//Conversion of RGB values to hex codes and back(from stack overflow)
 	{
 		function componentToHex(c) 
 		{
@@ -164,6 +164,16 @@
 		function rgbToHex(r, g, b) 
 		{
 			return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+		}
+		
+		function hexToRgb(hex) 
+		{
+		  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		  return result ? {
+				r: parseInt(result[1], 16),
+				g: parseInt(result[2], 16),
+				b: parseInt(result[3], 16)
+			} : null;
 		}
 	}
 	
@@ -346,7 +356,7 @@
 		//Iterate through each element of missileBases array, then access the properties of the value in each element i.e. the missile bases and draw them
 		for(i = 0; i < mBAmount; i++)
 		{
-			ctx.strokeStyle = defaultStrokeStyle;
+			ctx.strokeStyle = "rgba(" + hexToRgb(defaultStrokeStyle).r + ", " + hexToRgb(defaultStrokeStyle).g + ", " + hexToRgb(defaultStrokeStyle).b + ", 0.7" + ")";
 			ctx.beginPath();
 			ctx.arc(missileBases[i].structure.origin.x, missileBases[i].structure.origin.y, missileBases[i].structure.radius, missileBases[i].structure.startPoint, missileBases[i].structure.endPoint);
 			
@@ -395,8 +405,8 @@
 		{
 			//Gradient positions need to be updated with current missile positions each tick to allow gradient to "rotate" with missile angle
 			canvasGradient = ctx.createLinearGradient(missiles[i].origin.x, missiles[i].origin.y, missiles[i].currPos.x, missiles[i].currPos.y)
-			canvasGradient.addColorStop(0, "gray");
-			canvasGradient.addColorStop(1, "red");
+			canvasGradient.addColorStop(0, 'rgba(128, 128, 128, 0)');
+			canvasGradient.addColorStop(1, 'rgba(255, 0, 0, 1)');
 			
 			if(missiles.length <= 0) return;
 			if (missiles[i] != undefined)
