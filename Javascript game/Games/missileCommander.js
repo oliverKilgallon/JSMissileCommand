@@ -45,9 +45,15 @@
 	
 	//Explosion variables
 	var explosions = [];
-	var explSpeed = 1.5;
-	var explMinRadius = 2;
-	var explMaxRadius = 4;
+	var explSpeed = 0.2;
+	var explMinRadius = 0;
+	var explMaxRadius = 40;
+	var explFillColour = "#FFAA55";
+	var explLineWidth = 1;
+	var numOfExpl = 0;
+	var timeToExpand = 0;
+	var explDist = 0;
+	var radiusDistPerTick = 0;
 	
 	//MissileBaseGuns
 	var gunAngle = 0;
@@ -94,7 +100,7 @@
 	function Explosion(originX, originY, minRadius, maxRadius, speed)
 	{
 		this.origin = {x: originX, y: originY};
-		this.radius = {min: minRadius, max: maxRadius};
+		this.radius = {min: minRadius, max: maxRadius, curr: minRadius};
 		this.speed = speed;
 	}
 }
@@ -224,6 +230,9 @@
                    Math.abs(missiles[i].dest.y - missiles[i].currPos.y) < missileDeadzone)
 				{
 					missiles[i].isDead = true;
+					
+					createExplosion(missiles[i].currPos.x, missiles[i].currPos.y);
+					
 					dx = 0;
 					dy = 0;
 				}
@@ -246,6 +255,35 @@
 		explosions.push(new Explosion(explOriginX, explOriginY, explMinRadius, explMaxRadius, explSpeed));
 	}
 	
+	//Expand explosion radius according to the explosion speed
+	function updateExplosions()
+	{
+		numOfExpl = explosions.length;
+		for(i = 0; i < numOfExpl; i++)
+		{
+			if(explosions[i] != undefined)
+			{
+				explDist = explosions[i].radius.max - explosions[i].radius.min
+				timeToExpand = explDist / explSpeed;
+				radiusDistPerTick = explDist * (1 / timeToExpand);
+				explosions[i].radius.curr += radiusDistPerTick;
+				
+				console.log("explDist: " + explDist);
+				console.log("timeToExpand: " + timeToExpand);
+				console.log("currRadius: " + explosions[i].radius.curr);
+			}
+		}
+		
+		for(i = 0; i < numOfExpl; i++)
+		{
+			if(explosions[i] != undefined && explosions[i].radius.curr >= explosions[i].radius.max)
+			{
+				console.log("explosion end");
+				explosions.splice(i, 1);
+			}
+		}
+	}
+	
 	//Calculates the angle of the base guns based on the difference between the gun origin and the mouse cursor then uses this angle
 	//to generate start and endpoints for a drawn line of length equal some arbitrary value.
 	//atan2 is used as it returns an angle relative to the whole circle, while atan only uses the two rightmost quadrants of a circle
@@ -263,10 +301,7 @@
 
 //Event handlers
 {
-	//document.addEventListener("keydown", keyDownHandler);
-	//document.addEventListener("keypress", keyPressHandler);
 	document.addEventListener("keyup", keyUpHandler);
-	
 	canvas.addEventListener("mousemove", mMoveHandler); 
 	canvas.addEventListener("click", mClickHandler);
 	
@@ -303,6 +338,7 @@
 		drawBases();
 		drawCursor();
 		drawMissiles();
+		drawExplosions();
 	}
 	
 	//Draw missile base
@@ -373,16 +409,31 @@
 	
 	function drawExplosions()
 	{
-        //TODO
+        for(i = 0; i < explosions.length; i++)
+		{
+			if(explosions.length <= 0) return;
+			if(explosions[i] != undefined)
+			{
+				ctx.strokeStyle = defaultStrokeStyle;
+				ctx.beginPath();
+				ctx.arc(explosions[i].origin.x, explosions[i].origin.y, explosions[i].radius.curr, 0, 2 * Math.PI);
+				ctx.fillStyle = explFillColour;
+				ctx.fill();
+				ctx.lineWidth = explLineWidth;
+				ctx.stroke();
+				ctx.closePath();
+			}
+		}
 	}
 }
 	
-//Update loops
+//Main update loops
 {
 	function update()
 	{
 		determineActiveMB();
 		if(missiles.length > 0) updateMissiles();
+		if(explosions.length > 0) updateExplosions();
 	}
 	
 	//Main game loop
