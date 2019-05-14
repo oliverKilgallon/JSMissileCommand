@@ -110,7 +110,8 @@
 	//Initialise arrays, draw first pass and set update loop going
 	function init()
 	{
-		
+		canvas.setAttribute("width", window.getComputedStyle(canvas).getPropertyValue("width"));
+		canvas.setAttribute("height", window.getComputedStyle(canvas).getPropertyValue("height"));
 		for(i = 0; i < mBAmount; i++)
 		{			
 			mBOriginX = ((i + 1) * (canvas.width / (mBAmount + 1)));
@@ -267,10 +268,6 @@
 				timeToExpand = explDist / explSpeed;
 				radiusDistPerTick = explDist * (1 / timeToExpand);
 				explosions[i].radius.curr += radiusDistPerTick;
-				
-				console.log("explDist: " + explDist);
-				console.log("timeToExpand: " + timeToExpand);
-				console.log("currRadius: " + explosions[i].radius.curr);
 			}
 		}
 		
@@ -278,7 +275,6 @@
 		{
 			if(explosions[i] != undefined && explosions[i].radius.curr >= explosions[i].radius.max)
 			{
-				console.log("explosion end");
 				explosions.splice(i, 1);
 			}
 		}
