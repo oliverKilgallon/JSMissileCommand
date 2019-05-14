@@ -6,7 +6,9 @@
 	var overlay = document.getElementById("overlay");
 	var wrapper = document.getElementById("wrapper");
 	var ctx = canvas.getContext("2d");
-	var defaultStrokeStyle = "black";
+	var defaultStrokeStyle = "#FFA500";
+	var canvasBG = "#000020";
+	var canvasGradient = 0;
 	
 	//Game management variables
 	var paused = false;
@@ -112,6 +114,7 @@
 	{
 		canvas.setAttribute("width", window.getComputedStyle(canvas).getPropertyValue("width"));
 		canvas.setAttribute("height", window.getComputedStyle(canvas).getPropertyValue("height"));
+		canvas.style.backgroundColor = canvasBG;
 		for(i = 0; i < mBAmount; i++)
 		{			
 			mBOriginX = ((i + 1) * (canvas.width / (mBAmount + 1)));
@@ -356,7 +359,7 @@
 			ctx.stroke();
 			ctx.closePath();
 			
-			calcGunStartEndPts(i);
+			if(!missileBases[i].structure.isDestroyed && missileBases[i].structure.missileAmount > 0) calcGunStartEndPts(i);
 			
 			//Draw gun using calculated end points
 			ctx.beginPath();
@@ -390,13 +393,18 @@
 	{
 		for(i = 0; i < missiles.length; i++)
 		{
+			//Gradient positions need to be updated with current missile positions each tick to allow gradient to "rotate" with missile angle
+			canvasGradient = ctx.createLinearGradient(missiles[i].origin.x, missiles[i].origin.y, missiles[i].currPos.x, missiles[i].currPos.y)
+			canvasGradient.addColorStop(0, "gray");
+			canvasGradient.addColorStop(1, "red");
+			
 			if(missiles.length <= 0) return;
 			if (missiles[i] != undefined)
 			{
 				ctx.beginPath();
 				ctx.moveTo(missiles[i].origin.x, missiles[i].origin.y);
 				ctx.lineTo(missiles[i].currPos.x, missiles[i].currPos.y);
-				ctx.strokeStyle = missileTrailColour;
+				ctx.strokeStyle = canvasGradient;
 				ctx.stroke();
 				ctx.closePath();
 			}
