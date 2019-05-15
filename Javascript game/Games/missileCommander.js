@@ -428,13 +428,15 @@
 			if(explosions.length <= 0) return;
 			if(explosions[i] != undefined)
 			{
-				ctx.strokeStyle = defaultStrokeStyle;
+				var radialGrad = ctx.createRadialGradient(explosions[i].origin.x, explosions[i].origin.y, explosions[i].radius.min, explosions[i].origin.x, explosions[i].origin.y, explosions[i].radius.max);
+				radialGrad.addColorStop(0, 'rgba(' + hexToRgb(explFillColour).r + ', ' + hexToRgb(explFillColour).g + ', ' + hexToRgb(explFillColour).b + ', 1' + ')');
+				radialGrad.addColorStop(0.3, 'rgba(255, 0, 0, 0.8)');
+				radialGrad.addColorStop(1, 'rgba(128, 128, 128, 0)');
+				
 				ctx.beginPath();
 				ctx.arc(explosions[i].origin.x, explosions[i].origin.y, explosions[i].radius.curr, 0, 2 * Math.PI);
-				ctx.fillStyle = explFillColour;
+				ctx.fillStyle = radialGrad;
 				ctx.fill();
-				ctx.lineWidth = explLineWidth;
-				ctx.stroke();
 				ctx.closePath();
 			}
 		}
