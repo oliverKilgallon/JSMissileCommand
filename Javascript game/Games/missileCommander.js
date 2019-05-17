@@ -224,73 +224,10 @@
 		else if (activeMissileBase === null || missileBases[activeMissileBase].structure.missileAmount === 0) console.log("Out of missiles!");
 	}
 	
-	//Calculate amount missile needs to move each tick
-	function updateMissiles()
-	{
-		numOfMissiles = missiles.length;
-		for(i = 0; i < numOfMissiles; i++)
-		{
-			if(missiles[i] != undefined && !missiles[i].isDead)
-			{
-				missileAngle = (Math.atan2( (missiles[i].dest.y - missiles[i].origin.y), missiles[i].dest.x - missiles[i].origin.x ));
-				
-				dx = (Math.cos(missileAngle) * missileSpeed);
-				dy = (Math.sin(missileAngle) * missileSpeed);
-				
-				missiles[i].currPos.x += dx;
-				missiles[i].currPos.y += dy;
-				
-				if( Math.abs(missiles[i].dest.x - missiles[i].currPos.x) < missileDeadzone || 
-                   Math.abs(missiles[i].dest.y - missiles[i].currPos.y) < missileDeadzone)
-				{
-					missiles[i].isDead = true;
-					
-					createExplosion(missiles[i].currPos.x, missiles[i].currPos.y);
-					
-					dx = 0;
-					dy = 0;
-				}
-			}
-		}
-		
-		for(i = 0; i < numOfMissiles; i++)
-		{
-			if(missiles[i] != undefined && missiles[i].isDead)
-			{
-				missiles.splice(i, 1);
-			}
-		}
-		
-	}
-	
 	//Generate a new explosion and push it to explosion array. Indiscriminate of "owner" of explosions (player or comp).
 	function createExplosion(explOriginX, explOriginY)
 	{
 		explosions.push(new Explosion(explOriginX, explOriginY, explMinRadius, explMaxRadius, explSpeed));
-	}
-	
-	//Expand explosion radius according to the explosion speed
-	function updateExplosions()
-	{
-		numOfExpl = explosions.length;
-		for(i = 0; i < numOfExpl; i++)
-		{
-			if(explosions[i] != undefined)
-			{
-				explDist = explosions[i].radius.max - explosions[i].radius.min
-				timeToExpand = explDist / explSpeed;
-				radiusDistPerTick = explDist * (1 / timeToExpand);
-				explosions[i].radius.curr += radiusDistPerTick;
-			}
-		}
-		
-		for(i = 0; i < numOfExpl; i++)
-		{
-			if(explosions[i] != undefined && explosions[i].radius.curr >= explosions[i].radius.max)
-			{
-				explosions.splice(i, 1);
-			}
-		}
 	}
 	
 	//Calculates the angle of the base guns based on the difference between the gun origin and the mouse cursor then uses this angle
@@ -306,6 +243,7 @@
 		missileBases[index].structure.gunEndPoints.x = missileBases[index].structure.gunStartPoints.x + (mBGunLength * Math.cos(gunAngle)),
 		missileBases[index].structure.gunEndPoints.y =  missileBases[index].structure.gunStartPoints.y + (mBGunLength * Math.sin(gunAngle));
 	}
+	
 }
 
 //Event handlers
@@ -364,19 +302,24 @@
 			if(i === activeMissileBase && activeMissileBase != null) ctx.fillStyle = mBActiveFillColor;
 			else ctx.fillStyle = mBFillColor;
 			
-			ctx.fill();
-			ctx.lineWidth = mBLineWidth;
-			ctx.stroke();
-			ctx.closePath();
+			if(!missileBases[i].structure.isDestroyed)
+			{
+				ctx.fill();
+				ctx.lineWidth = mBLineWidth;
+				ctx.stroke();
+				ctx.closePath();
+			}
 			
 			if(!missileBases[i].structure.isDestroyed && missileBases[i].structure.missileAmount > 0) calcGunStartEndPts(i);
-			
-			//Draw gun using calculated end points
-			ctx.beginPath();
-			ctx.moveTo(missileBases[i].structure.gunStartPoints.x, missileBases[i].structure.gunStartPoints.y);
-			ctx.lineTo(missileBases[i].structure.gunEndPoints.x, missileBases[i].structure.gunEndPoints.y);
-			ctx.stroke();
-			ctx.closePath();
+			if(!missileBases[i].structure.isDestroyed)
+			{
+				//Draw gun using calculated end points
+				ctx.beginPath();
+				ctx.moveTo(missileBases[i].structure.gunStartPoints.x, missileBases[i].structure.gunStartPoints.y);
+				ctx.lineTo(missileBases[i].structure.gunEndPoints.x, missileBases[i].structure.gunEndPoints.y);
+				ctx.stroke();
+				ctx.closePath();
+			}
 		}
 	}
 	
@@ -458,6 +401,102 @@
 		if(!paused){
 			update();
 			draw();
+		}
+	}
+	
+	//Calculate amount missile needs to move each tick
+	function updateMissiles()
+	{
+		numOfMissiles = missiles.length;
+		for(i = 0; i < numOfMissiles; i++)
+		{
+			if(missiles[i] != undefined && !missiles[i].isDead)
+			{
+				missileAngle = (Math.atan2( (missiles[i].dest.y - missiles[i].origin.y), missiles[i].dest.x - missiles[i].origin.x ));
+				
+				if(!missiles[i].isDead)
+				{
+					dx = (Math.cos(missileAngle) * missileSpeed);
+					dy = (Math.sin(missileAngle) * missileSpeed);
+				}
+				else
+				{
+					dx = 0;
+					dy = 0;
+				}
+				
+				missiles[i].currPos.x += dx;
+				missiles[i].currPos.y += dy;
+				
+				if( Math.abs(missiles[i].dest.x - missiles[i].currPos.x) < missileDeadzone || 
+                   Math.abs(missiles[i].dest.y - missiles[i].currPos.y) < missileDeadzone)
+				{
+					missiles[i].isDead = true;
+					
+					createExplosion(missiles[i].currPos.x, missiles[i].currPos.y);
+				}
+			}
+		}
+		
+		for(i = 0; i < numOfMissiles; i++)
+		{
+			if(missiles[i] != undefined && missiles[i].isDead)
+			{
+				missiles.splice(i, 1);
+			}
+		}
+		
+	}
+	
+	//Expand explosion radius according to the explosion speed
+	function updateExplosions()
+	{
+		numOfExpl = explosions.length;
+		for(i = 0; i < numOfExpl; i++)
+		{
+			if(explosions[i] != undefined)
+			{
+				explDist = explosions[i].radius.max - explosions[i].radius.min
+				timeToExpand = explDist / explSpeed;
+				radiusDistPerTick = explDist * (1 / timeToExpand);
+				explosions[i].radius.curr += radiusDistPerTick;
+			}
+		}
+		
+		updateExplColl();
+		
+		for(i = 0; i < numOfExpl; i++)
+		{
+			if(explosions[i] != undefined && explosions[i].radius.curr >= explosions[i].radius.max)
+			{
+				explosions.splice(i, 1);
+			}
+		}
+	}
+	
+	function updateExplColl()
+	{
+		for(i = 0; i < explosions.length; i++)
+		{
+			for(j = 0; j < missiles.length; j++)
+			{
+				if( Math.sqrt(Math.pow(missiles[j].currPos.x - explosions[i].origin.x, 2) + Math.pow(missiles[j].currPos.y - explosions[i].origin.y, 2) ) < explosions[i].radius.curr ) 
+				{
+					missiles[j].isDead = true;
+					createExplosion(missiles[j].currPos.x, missiles[j].currPos.y);
+				}
+			}
+			
+			for(j = 0; j < missileBases.length; j++)
+			{
+				if( Math.sqrt(Math.pow(missileBases[j].structure.gunStartPoints.x - explosions[i].origin.x, 2) + Math.pow(missileBases[j].structure.gunStartPoints.y - explosions[i].origin.y, 2) ) < explosions[i].radius.curr  && 
+				!missileBases[j].structure.isDestroyed) 
+				{
+					missileBases[j].structure.isDestroyed = true;
+					missileBases[j].structure.missileAmount = 0;
+					createExplosion(missileBases[j].structure.gunStartPoints.x, missileBases[j].structure.gunStartPoints.y);
+				}
+			}
 		}
 	}
 }
